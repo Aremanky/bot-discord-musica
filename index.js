@@ -6,9 +6,8 @@ podais hostear vosotros mismos, al igual que yo voy ha hacer en mi servidor, no 
 miedo a hacer un fork y mejorarlo o adaptarlo a vosotros. Espero ser de ayuda.
 */
 
-const { Client, GatewayIntentBits,ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits} = require('discord.js');
 const { Player } = require('discord-player');
-const { DefaultExtractors } = require('@discord-player/extractor');
 require('dotenv').config();
 
 // Con el tiempo añadiré en otro repositorios otros comandos como casino
@@ -29,16 +28,25 @@ const player = new Player(client);
 async function iniciarBot() {
     // Carga los extractores (YouTube, Spotify, SoundCloud, etc.), yo solo usaré youtube y 
     // spotify porque lo tengo adaptado para mi y mis amigos, pero sientete libre de cambiarlo
-    await player.extractors.loadMulti(DefaultExtractors);
+    await player.extractors.loadDefault();
 
     setupMusicCommands(client, player, prefix);
 
-    client.once('ready', () => {
+    client.once('clientReady', () => {
         console.log(`🎵 ¡Bot encendido y listo como ${client.user.tag}!`);
     });
 
     // Conectamos el bot a Discord
     await client.login(process.env.TOKEN); // ⚠️IMPORTANTE⚠️: Crea un .env y guarda tu token así TOKEN=Tu_Token
 }
+
+// A veces no encuentra musica y me veo obligado a poner un Anti-Crash para evitar caidas del bot
+process.on('unhandledRejection', (error) => {
+    console.error('🛡️ [Anti-Crash] Error no manejado:', error);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('🛡️ [Anti-Crash] Excepción no capturada:', error);
+});
 
 iniciarBot();

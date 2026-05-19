@@ -1,4 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { QueryType } = require('discord-player');
 
 module.exports = (client, player,prefix) => {
     player.events.on('error', (queue, error) => {
@@ -11,7 +12,7 @@ module.exports = (client, player,prefix) => {
 
     player.events.on('playerStart', async (queue, track) => {
         if (queue.metadata && queue.metadata.lastPlayerMessage) {
-            await queue.metadata.lastPlayerMessage.delete();
+            await queue.lastPlayerMessage.delete().catch(() => {});
         }
 
         const filaBotones = new ActionRowBuilder()
@@ -34,23 +35,17 @@ module.exports = (client, player,prefix) => {
                     .setStyle(ButtonStyle.Danger)     
             );
 
-        try {
-            const nuevoMensaje = await queue.metadata.channel.send({
-                content: `▶️ **Escuchando ahora:** **${track.title}**`,
-                components: [filaBotones]
-            });
+        const nuevoMensaje = await queue.metadata.channel.send({
+            content: `▶️ **Escuchando ahora:** **${track.title}**`,
+            components: [filaBotones]
+        });
 
-            queue.metadata.lastPlayerMessage = nuevoMensaje;
-        } catch (error) {
-            console.error("Error al enviar el panel del reproductor:", error);
-        }
+        queue.metadata.lastPlayerMessage = nuevoMensaje;
     });
 
     player.events.on('emptyQueue', async (queue) => {
         if (queue.metadata && queue.metadata.lastPlayerMessage) {
-            try {
-                await queue.metadata.lastPlayerMessage.delete();
-            } catch (err) {}
+            await queue.lastPlayerMessage.delete().catch(() => {});
         }
     });
 
@@ -82,7 +77,8 @@ module.exports = (client, player,prefix) => {
         const { track } = await player.play(canalDeVoz, busqueda, {
             nodeOptions: {
                 metadata: message 
-            }
+            },
+            searchEngine: QueryType.AUTO
         });
 
         if (queueExistente && queueExistente.isPlaying()) {
