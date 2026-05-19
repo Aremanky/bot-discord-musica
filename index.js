@@ -6,8 +6,9 @@ podais hostear vosotros mismos, al igual que yo voy ha hacer en mi servidor, no 
 miedo a hacer un fork y mejorarlo o adaptarlo a vosotros. Espero ser de ayuda.
 */
 
-const { Client, GatewayIntentBits} = require('discord.js');
+const { Client, GatewayIntentBits,ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { Player } = require('discord-player');
+const { DefaultExtractors } = require('@discord-player/extractor');
 require('dotenv').config();
 
 // Con el tiempo añadiré en otro repositorios otros comandos como casino
@@ -28,7 +29,7 @@ const player = new Player(client);
 async function iniciarBot() {
     // Carga los extractores (YouTube, Spotify, SoundCloud, etc.), yo solo usaré youtube y 
     // spotify porque lo tengo adaptado para mi y mis amigos, pero sientete libre de cambiarlo
-    await player.extractors.loadDefault();
+    await player.extractors.loadMulti(DefaultExtractors);
 
     setupMusicCommands(client, player, prefix);
 
