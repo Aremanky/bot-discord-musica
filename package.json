@@ -1,0 +1,27 @@
+{
+  "name": "bot-discord-musica",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aremanky/bot-discord-musica.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Aremanky/bot-discord-musica/issues"
+  },
+  "homepage": "https://github.com/Aremanky/bot-discord-musica#readme",
+  "dependencies": {
+    "@discord-player/extractor": "^7.2.0",
+    "discord-player": "^7.2.0",
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "ffmpeg-static": "^5.3.0"
+  }
+}
