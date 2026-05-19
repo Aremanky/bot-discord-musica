@@ -6,10 +6,15 @@ podais hostear vosotros mismos, al igual que yo voy ha hacer en mi servidor, no 
 miedo a hacer un fork y mejorarlo o adaptarlo a vosotros. Espero ser de ayuda.
 */
 
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits,ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { Player } = require('discord-player');
 const { DefaultExtractors } = require('@discord-player/extractor');
 require('dotenv').config();
+
+// Con el tiempo añadiré en otro repositorios otros comandos como casino
+const setupMusicCommands = require('./musicCommands')
+
+const prefix = '.'; // Cambia el prefijo a tu gusto
 
 const client = new Client({
     intents: [
@@ -26,6 +31,8 @@ async function iniciarBot() {
     // spotify porque lo tengo adaptado para mi y mis amigos, pero sientete libre de cambiarlo
     await player.extractors.loadMulti(DefaultExtractors);
 
+    setupMusicCommands(client, player, prefix);
+
     client.once('ready', () => {
         console.log(`🎵 ¡Bot encendido y listo como ${client.user.tag}!`);
     });
@@ -33,7 +40,5 @@ async function iniciarBot() {
     // Conectamos el bot a Discord
     await client.login(process.env.TOKEN); // ⚠️IMPORTANTE⚠️: Crea un .env y guarda tu token así TOKEN=Tu_Token
 }
-
-
 
 iniciarBot();
