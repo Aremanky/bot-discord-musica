@@ -1,5 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { QueryType } = require('discord-player');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
 module.exports = (client, player,prefix) => {
     player.events.on('error', (queue, error) => {
@@ -11,7 +10,7 @@ module.exports = (client, player,prefix) => {
     });
 
     player.events.on('playerStart', async (queue, track) => {
-        if (queue.metadata && queue.metadata.lastPlayerMessage) {
+        if (queue.lastPlayerMessage) {
             await queue.lastPlayerMessage.delete().catch(() => {});
         }
 
@@ -40,18 +39,51 @@ module.exports = (client, player,prefix) => {
             components: [filaBotones]
         });
 
-        queue.metadata.lastPlayerMessage = nuevoMensaje;
+        queue.lastPlayerMessage = nuevoMensaje;
     });
 
     player.events.on('emptyQueue', async (queue) => {
-        if (queue.metadata && queue.metadata.lastPlayerMessage) {
+        if (queue.lastPlayerMessage) {
             await queue.lastPlayerMessage.delete().catch(() => {});
         }
     });
 
     // Comando .play <canción o url>
     client.on('messageCreate', async (message) => {
-        if (message.content.startsWith(prefix+' play')){
+        if (message.content.startsWith(prefix + 'queue')){
+
+            const queue = player.nodes.get(message.guild.id);
+
+            if (!queue || !queue.isPlaying()) {
+                return message.reply(`¿Pero qué lista quieres ver si no hay nada sonando? 🙄 Pide una canción primero, espabilao.`);
+            }
+
+            const currentTrack = queue.currentTrack;
+            const tracks = queue.tracks.toArray();
+
+            let textoCola = `**🎶 COLA DE REPRODUCCIÓN:**\n\n`;
+            textoCola += `▶️ **Sonando ahora:** ${currentTrack.title}\n\n`;
+
+            if (tracks.length === 0) {
+                textoCola += `*No hay más canciones en espera.*`;
+            } else {
+                textoCola += `**Próximas canciones:**\n`;
+
+                const maxCanciones = 10;
+                const cancionesAMostrar = tracks.slice(0, maxCanciones);
+                
+                cancionesAMostrar.forEach((track, index) => {
+                    textoCola += `**${index + 1}.** ${track.title}\n`;
+                });
+
+                if (tracks.length > maxCanciones) {
+                    textoCola += `\n*...y ${tracks.length - maxCanciones} canciones más en la lista.*`;
+                }
+            }
+            return message.reply(textoCola);
+        }
+
+        if (message.content.startsWith(prefix+' play' || message.content.startsWith(prefix + ' queue'))){
             return message.reply(message.member.displayName+" hay que ser pringao como pa que se te cuele un espacio en el comando");
         }
 
@@ -77,8 +109,7 @@ module.exports = (client, player,prefix) => {
         const { track } = await player.play(canalDeVoz, busqueda, {
             nodeOptions: {
                 metadata: message 
-            },
-            searchEngine: QueryType.AUTO
+            }
         });
 
         if (queueExistente && queueExistente.isPlaying()) {
