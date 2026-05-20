@@ -1,5 +1,59 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
+function generarEmbedCola(queue, guildName, pagina, autor) {
+    const currentTrack = queue.currentTrack;
+    const tracks = queue.tracks.toArray();
+    const maxCanciones = 10;
+    
+    const totalPaginas = Math.ceil(tracks.length / maxCanciones) || 1;
+
+    if (pagina < 0) pagina = 0;
+    if (pagina >= totalPaginas) pagina = totalPaginas - 1;
+
+    const embedCola = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle(`🎶 Lista de reproducción - ${guildName}`)
+        .setThumbnail(currentTrack.thumbnail)
+        .addFields(
+            { name: '▶️ Sonando ahora:', value: `\`${currentTrack.title}\` \n*Duración: ${currentTrack.duration}*` }
+        );
+
+    if (tracks.length === 0) {
+        embedCola.setDescription('*No hay más canciones en la cola de reproducción.*');
+    } else {
+        const inicio = pagina * maxCanciones;
+        const fin = inicio + maxCanciones;
+        const cancionesAMostrar = tracks.slice(inicio, fin);
+        let listaTexto = '';
+
+        cancionesAMostrar.forEach((track, index) => {
+            listaTexto += `**${inicio + index + 1}.** \`${track.title}\` — *${track.duration}*\n`;
+        });
+
+        embedCola.addFields({ name: `📋 Próximas canciones (Pág. ${pagina + 1}/${totalPaginas}):`, value: listaTexto });
+    }
+
+    embedCola.setFooter({ 
+        text: `Canciones en espera: ${tracks.length} | Solicitado por ${autor.displayName}`,
+        iconURL: autor.displayAvatarURL({ dynamic: true })
+    });
+
+    const filaPaginacion = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`queue_page_${pagina - 1}`)
+            .setEmoji('⬅️')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(pagina === 0), 
+        new ButtonBuilder()
+            .setCustomId(`queue_page_${pagina + 1}`)
+            .setEmoji('➡️')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(pagina >= totalPaginas - 1 || tracks.length === 0) 
+    );
+
+    return { embedCola, filaPaginacion };
+}
+
 module.exports = (client, player,prefix) => {
     player.events.on('error', (queue, error) => {
         console.error(`❌ [Error de la cola]: ${error.message}`);
@@ -9,18 +63,32 @@ module.exports = (client, player,prefix) => {
         console.error(`❌ [Error del reproductor de audio]: ${error.message}`);
     });
 
+    function generarEmbedReproductor(queue, track) {
+
+        const timestamp = queue.node.getTimestamp();
+        const tiempoActual = timestamp?.current?.label || '00:00';
+        const tiempoTotal = timestamp?.total?.label || track.duration;
+        const progresoPorcentaje = timestamp?.progress || 0;
+
+        const totalBarras = 20;
+        const barrasPasadas = Math.min(totalBarras, Math.max(0, Math.round((progresoPorcentaje / 100) * totalBarras)));
+        const barraVisual = '▬'.repeat(barrasPasadas) + '🔘' + '▬'.repeat(totalBarras - barrasPasadas);
+
+        return new EmbedBuilder()
+            .setColor('#5865F2')
+            .setTitle(`▶️ ${track.title}`)
+            .setImage(track.thumbnail) 
+            .setFooter({ 
+                text: `${tiempoActual}  ${barraVisual}  ${tiempoTotal}   |   Controla la música` 
+            });
+    }
+
     player.events.on('playerStart', async (queue, track) => {
+        if (queue.updateInterval) clearInterval(queue.updateInterval);
+
         if (queue.lastPlayerMessage) {
             await queue.lastPlayerMessage.delete().catch(() => {});
         }
-
-        const embedReproductor = new EmbedBuilder()
-            .setColor('#5865F2') 
-            .setTitle(`▶️ ${track.title}`) 
-            .setImage(track.thumbnail) 
-            .setFooter({ 
-                text: `⏱️ Duración: ${track.duration}  |  Controla la música con los botones de abajo` 
-            });
 
         const filaBotones = new ActionRowBuilder()
             .addComponents(
@@ -41,13 +109,23 @@ module.exports = (client, player,prefix) => {
                     .setEmoji('🗑️')
                     .setStyle(ButtonStyle.Danger)     
             );
-
+        
+        const embedInicial = generarEmbedReproductor(queue, track);
         const nuevoMensaje = await queue.metadata.channel.send({
-            embeds: [embedReproductor],
+            embeds: [embedInicial],
             components: [filaBotones]
         });
 
         queue.lastPlayerMessage = nuevoMensaje;
+
+        queue.updateInterval = setInterval(async () => {
+            if (!queue || !queue.isPlaying()) {
+                clearInterval(queue.updateInterval);
+                return;
+            }
+            const embedActualizado = generarEmbedReproductor(queue, queue.currentTrack);
+            await queue.lastPlayerMessage.edit({ embeds: [embedActualizado] }).catch(() => {});
+        }, 20000);
     });
 
     player.events.on('emptyQueue', async (queue) => {
@@ -59,7 +137,7 @@ module.exports = (client, player,prefix) => {
     // Comando .play <canción o url>
     client.on('messageCreate', async (message) => {
 
-        if (message.content.startsWith(prefix+' play' || message.content.startsWith(prefix + ' queue'))){
+        if (message.content.startsWith(prefix+' play' || message.content.startsWith(prefix + ' cola'))){
             return message.reply(message.member.displayName+" hay que ser pringao como pa que se te cuele un espacio en el comando");
         }
 
@@ -99,7 +177,7 @@ module.exports = (client, player,prefix) => {
 
     //Cola de canciones
     client.on('messageCreate', async (message) => {
-        if (message.author.bot || !message.content.startsWith(prefix + 'queue')) return;
+        if (message.author.bot || !message.content.startsWith(prefix + 'cola')) return;
 
         const queue = player.nodes.get(message.guild.id);
 
@@ -107,47 +185,28 @@ module.exports = (client, player,prefix) => {
             return message.reply(`¿Pero qué lista quieres ver si no hay nada sonando? 🙄 Pide una canción primero, espabilao.`);
         }
 
-        const currentTrack = queue.currentTrack;
-        const tracks = queue.tracks.toArray();
-
-        const embedCola = new EmbedBuilder()
-            .setColor('#5865F2') 
-            .setTitle(`🎶 Lista de reproducción - ${message.guild.name}`)
-            .setThumbnail(currentTrack.thumbnail) 
-            .addFields(
-                { name: '▶️ Sonando ahora:', value: `\`${currentTrack.title}\` \n*Duración: ${currentTrack.duration}*` }
-            );
-
-        if (tracks.length === 0) {
-            embedCola.setDescription('*No hay más canciones en la cola de reproducción.*');
-        } else {
-            const maxCanciones = 10;
-            const cancionesAMostrar = tracks.slice(0, maxCanciones);
-            let listaTexto = '';
-
-            cancionesAMostrar.forEach((track, index) => {
-                listaTexto += `**${index + 1}.** \`${track.title}\` — *${track.duration}*\n`;
-            });
-
-            if (tracks.length > maxCanciones) {
-                listaTexto += `\n*...y ${tracks.length - maxCanciones} canciones más en la lista.*`;
-            }
-
-            embedCola.addFields({ name: '📋 Próximas canciones:', value: listaTexto });
-        }
-
-        embedCola.setFooter({ 
-            text: `Canciones en espera: ${tracks.length} | Solicitado por ${message.author.displayName}`,
-            iconURL: message.author.displayAvatarURL({ dynamic: true })
-        });
-
-        return message.reply({ embeds: [embedCola] });
+        // Generamos la página 0 (la primera de todas)
+        const { embedCola, filaPaginacion } = generarEmbedCola(queue, message.guild.name, 0, message.member);
+        return message.reply({ embeds: [embedCola], components: [filaPaginacion] });
     });
 
     client.on('interactionCreate', async (interaction) => {
         if (!interaction.isButton()) return;
 
         const queue = player.nodes.get(interaction.guild.id);
+        
+        if (interaction.customId.startsWith('queue_page_')) {
+            if (!queue || !queue.isPlaying()) {
+                return interaction.reply({ content: '❌ La música se ha detenido y esta lista ya no es válida.', ephemeral: true });
+            }
+
+            const paginaDestino = parseInt(interaction.customId.split('_')[2]);
+            
+            const { embedCola, filaPaginacion } = generarEmbedCola(queue, interaction.guild.name, paginaDestino, interaction.member);
+
+            await interaction.update({ embeds: [embedCola], components: [filaPaginacion] });
+            return;
+        }
         
         if (!queue) {
             return interaction.reply({ content: '❌ No hay música en cola.', ephemeral: true });
