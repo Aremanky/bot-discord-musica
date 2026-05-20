@@ -14,6 +14,14 @@ module.exports = (client, player,prefix) => {
             await queue.lastPlayerMessage.delete().catch(() => {});
         }
 
+        const embedReproductor = new EmbedBuilder()
+            .setColor('#5865F2') 
+            .setTitle(`▶️ ${track.title}`) 
+            .setImage(track.thumbnail) 
+            .setFooter({ 
+                text: `⏱️ Duración: ${track.duration}  |  Controla la música con los botones de abajo` 
+            });
+
         const filaBotones = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -35,7 +43,7 @@ module.exports = (client, player,prefix) => {
             );
 
         const nuevoMensaje = await queue.metadata.channel.send({
-            content: `▶️ **Escuchando ahora:** **${track.title}**`,
+            embeds: [embedReproductor],
             components: [filaBotones]
         });
 
@@ -50,38 +58,6 @@ module.exports = (client, player,prefix) => {
 
     // Comando .play <canción o url>
     client.on('messageCreate', async (message) => {
-        if (message.content.startsWith(prefix + 'queue')){
-
-            const queue = player.nodes.get(message.guild.id);
-
-            if (!queue || !queue.isPlaying()) {
-                return message.reply(`¿Pero qué lista quieres ver si no hay nada sonando? 🙄 Pide una canción primero, espabilao.`);
-            }
-
-            const currentTrack = queue.currentTrack;
-            const tracks = queue.tracks.toArray();
-
-            let textoCola = `**🎶 COLA DE REPRODUCCIÓN:**\n\n`;
-            textoCola += `▶️ **Sonando ahora:** ${currentTrack.title}\n\n`;
-
-            if (tracks.length === 0) {
-                textoCola += `*No hay más canciones en espera.*`;
-            } else {
-                textoCola += `**Próximas canciones:**\n`;
-
-                const maxCanciones = 10;
-                const cancionesAMostrar = tracks.slice(0, maxCanciones);
-                
-                cancionesAMostrar.forEach((track, index) => {
-                    textoCola += `**${index + 1}.** ${track.title}\n`;
-                });
-
-                if (tracks.length > maxCanciones) {
-                    textoCola += `\n*...y ${tracks.length - maxCanciones} canciones más en la lista.*`;
-                }
-            }
-            return message.reply(textoCola);
-        }
 
         if (message.content.startsWith(prefix+' play' || message.content.startsWith(prefix + ' queue'))){
             return message.reply(message.member.displayName+" hay que ser pringao como pa que se te cuele un espacio en el comando");
@@ -119,6 +95,53 @@ module.exports = (client, player,prefix) => {
         } else {
             await msjEstado.delete().catch(() => {});
         }
+    });
+
+    //Cola de canciones
+    client.on('messageCreate', async (message) => {
+        if (message.author.bot || !message.content.startsWith(prefix + 'queue')) return;
+
+        const queue = player.nodes.get(message.guild.id);
+
+        if (!queue || !queue.isPlaying()) {
+            return message.reply(`¿Pero qué lista quieres ver si no hay nada sonando? 🙄 Pide una canción primero, espabilao.`);
+        }
+
+        const currentTrack = queue.currentTrack;
+        const tracks = queue.tracks.toArray();
+
+        const embedCola = new EmbedBuilder()
+            .setColor('#5865F2') 
+            .setTitle(`🎶 Lista de reproducción - ${message.guild.name}`)
+            .setThumbnail(currentTrack.thumbnail) 
+            .addFields(
+                { name: '▶️ Sonando ahora:', value: `\`${currentTrack.title}\` \n*Duración: ${currentTrack.duration}*` }
+            );
+
+        if (tracks.length === 0) {
+            embedCola.setDescription('*No hay más canciones en la cola de reproducción.*');
+        } else {
+            const maxCanciones = 10;
+            const cancionesAMostrar = tracks.slice(0, maxCanciones);
+            let listaTexto = '';
+
+            cancionesAMostrar.forEach((track, index) => {
+                listaTexto += `**${index + 1}.** \`${track.title}\` — *${track.duration}*\n`;
+            });
+
+            if (tracks.length > maxCanciones) {
+                listaTexto += `\n*...y ${tracks.length - maxCanciones} canciones más en la lista.*`;
+            }
+
+            embedCola.addFields({ name: '📋 Próximas canciones:', value: listaTexto });
+        }
+
+        embedCola.setFooter({ 
+            text: `Canciones en espera: ${tracks.length} | Solicitado por ${message.author.displayName}`,
+            iconURL: message.author.displayAvatarURL({ dynamic: true })
+        });
+
+        return message.reply({ embeds: [embedCola] });
     });
 
     client.on('interactionCreate', async (interaction) => {
