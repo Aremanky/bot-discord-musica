@@ -70,7 +70,7 @@ module.exports = (client, player,prefix) => {
         const tiempoTotal = timestamp?.total?.label || track.duration;
         const progresoPorcentaje = timestamp?.progress || 0;
 
-        const totalBarras = 20;
+        const totalBarras = 13;
         const barrasPasadas = Math.min(totalBarras, Math.max(0, Math.round((progresoPorcentaje / 100) * totalBarras)));
         const barraVisual = '▬'.repeat(barrasPasadas) + '🔘' + '▬'.repeat(totalBarras - barrasPasadas);
 
@@ -136,8 +136,9 @@ module.exports = (client, player,prefix) => {
 
     // Comando .play <canción o url>
     client.on('messageCreate', async (message) => {
+        if (message.author.bot) return;
 
-        if (message.content.startsWith(prefix+' play' || message.content.startsWith(prefix + ' cola'))){
+        if (message.content.startsWith(prefix+' ')){
             return message.reply(message.member.displayName+" hay que ser pringao como pa que se te cuele un espacio en el comando");
         }
 
@@ -175,7 +176,7 @@ module.exports = (client, player,prefix) => {
         }
     });
 
-    //Cola de canciones
+    //Comando .cola para ver lista de reproducción
     client.on('messageCreate', async (message) => {
         if (message.author.bot || !message.content.startsWith(prefix + 'cola')) return;
 
@@ -188,6 +189,46 @@ module.exports = (client, player,prefix) => {
         // Generamos la página 0 (la primera de todas)
         const { embedCola, filaPaginacion } = generarEmbedCola(queue, message.guild.name, 0, message.member);
         return message.reply({ embeds: [embedCola], components: [filaPaginacion] });
+    });
+
+    // Comando .fora pa quitar
+    client.on('messageCreate', async (message) => {
+        if (message.author.bot || !message.content.startsWith(prefix + 'fora')) return;
+
+        const queue = player.nodes.get(message.guild.id);
+
+        if (message.member.voice.channelId !== message.guild.members.me.voice.channelId) {
+            return message.reply(message.member.displayName+' no vas a joder mientras yo esté aquí, entra al menos a su chat de voz y da la cara, Payaso');
+        }
+
+        if (!queue || !queue.isPlaying()) {
+            return message.reply(`¿Pero qué quieres quitar si no está sonando nada? Como se nota que tus padres son primos🙄`);
+        }
+
+        const args = message.content.split(' ').slice(1);
+        const numeroBuscado = parseInt(args[0]);
+
+        if (isNaN(numeroBuscado) || numeroBuscado <= 0) { 
+            return message.reply(`Pon un numero. Ejemplo: \`${prefix}fora 3\`. Entiendo que tu profe se suicidara al aguantar a semejante trozo de carse sin cerebro.`);
+        }
+
+        const tracks = queue.tracks.toArray();
+
+        if (tracks.length === 0) {
+            return message.reply(`La cola está vacía, no hay nada que quitar aparte de la que suena y tus ganas de vivir (y para eso usa el botón de Skip, genio).`);
+        }
+
+        const indiceReal = numeroBuscado - 1;
+
+        if (indiceReal >= tracks.length) {
+            return message.reply(`Tranquilo, entiendo que tienes down, te lo explico pa tontitos. En la lista solo hay **${tracks.length}** canciones en espera, no me pidas la **${numeroBuscado}**, pide una que esté en la lista.`);
+        }
+
+        const cancionEliminada = tracks[indiceReal];
+
+        queue.node.remove(indiceReal);
+
+        return message.reply(`🗑️ ¡A MAMARLA!: He borrado **${cancionEliminada.title}** de la cola.`);
     });
 
     client.on('interactionCreate', async (interaction) => {
