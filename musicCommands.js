@@ -125,7 +125,7 @@ module.exports = (client, player,prefix) => {
             }
             const embedActualizado = generarEmbedReproductor(queue, queue.currentTrack);
             await queue.lastPlayerMessage.edit({ embeds: [embedActualizado] }).catch(() => {});
-        }, 20000);
+        }, 13000);
     });
 
     player.events.on('emptyQueue', async (queue) => {
@@ -229,6 +229,44 @@ module.exports = (client, player,prefix) => {
         queue.node.remove(indiceReal);
 
         return message.reply(`🗑️ ¡A MAMARLA!: He borrado **${cancionEliminada.title}** de la cola.`);
+    });
+
+    // Comando .help
+    client.on('messageCreate', async (message) => {
+        if (message.author.bot || !message.content.startsWith(prefix + 'help')) return;
+
+        const embedHelp = new EmbedBuilder()
+            .setColor('#5865F2')
+            .setTitle(`📖 Manual de instrucciones para espabilaos`)
+            .setDescription(`Aquí tienes la lista de comandos disponibles. Úsalos bien y estudiatelos que no me gusta repetir las cosas`)
+            .addFields(
+                { 
+                    name: '🎵 Comandos de Música', 
+                    value: `\`${prefix}play <búsqueda o URL>\` — Busca una canción en YouTube/Spotify y la reproduce.\n` +
+                           `*Ejemplo: ${prefix}play linkin park*\n`
+                           `*Ejemplo: ${prefix}play https://youtu.be/xvFZjo5PgG0?si=rvlK4W2ib2BHASd3*`
+                },
+                { 
+                    name: '📋 Gestión de la Cola', 
+                    value: `\`${prefix}cola\` — Muestra la lista de canciones en espera con botones interactivos para pasar de página.\n` +
+                           `\`${prefix}fora <número>\` — Quito la canción con ese número de la lista.\n` +
+                           `*Ejemplo: ${prefix}fora 3*`
+                },
+                {
+                    name: '🎛️ El Panel del Reproductor',
+                    value: `Cuando empieza una canción, aparece una tarjeta con botones en el chat:\n` +
+                           `⏮️ — Vuelve al principio de la canción (o a la anterior si lleva menos de 10s).\n` +
+                           `⏯️ — Pausa o reanuda la música.\n` +
+                           `⏭️ — Salta a la siguiente canción.\n` +
+                           `🗑️ — Borra TODA la lista de reproducción.`
+                }
+            )
+            .setFooter({ 
+                text: `Ayuda solicitada por el unineuronal de ${message.author.displayName}`, 
+                iconURL: message.author.displayAvatarURL({ dynamic: true }) 
+            });
+
+        return message.reply({ embeds: [embedHelp] });
     });
 
     client.on('interactionCreate', async (interaction) => {
