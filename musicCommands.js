@@ -243,7 +243,7 @@ module.exports = (client, player,prefix) => {
                 { 
                     name: '🎵 Comandos de Música', 
                     value: `\`${prefix}play <búsqueda o URL>\` — Busca una canción en YouTube/Spotify y la reproduce.\n` +
-                           `*Ejemplo: ${prefix}play linkin park*\n`
+                           `*Ejemplo: ${prefix}play linkin park*\n`+
                            `*Ejemplo: ${prefix}play https://youtu.be/xvFZjo5PgG0?si=rvlK4W2ib2BHASd3*`
                 },
                 { 
