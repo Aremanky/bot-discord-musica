@@ -3,7 +3,9 @@ Este bot nace de la necesidad de un bot decente de música, ya que los bloqueos 
 a los bots de música, o que simplemente dejan de funcionar por la masificación de
 personas que los usan, han degradado la calidad de estos. Este bot está para que lo 
 podais hostear vosotros mismos, al igual que yo voy ha hacer en mi servidor, no tengais 
-miedo a hacer un fork y mejorarlo o adaptarlo a vosotros. Espero ser de ayuda.
+miedo a hacer un fork y mejorarlo o adaptarlo a vosotros. Espero ser de ayuda. Por desgracia
+este es mi primer bot y no he podido mejorarlo para escuchar musica de youtube, solo de
+sound cloud, pero el siguiente bot si podrá escuchar de youtube.
 */
 
 const { Client, GatewayIntentBits,ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -11,10 +13,9 @@ const { Player } = require('discord-player');
 const { DefaultExtractors } = require('@discord-player/extractor');
 require('dotenv').config();
 
-// Con el tiempo añadiré en otro repositorios otros comandos como casino
 const setupMusicCommands = require('./musicCommands')
 
-const prefix = '.'; // Cambia el prefijo a tu gusto
+const prefix = '.'; 
 
 const client = new Client({
     intents: [
@@ -27,8 +28,6 @@ const client = new Client({
 
 const player = new Player(client);
 async function iniciarBot() {
-    // Carga los extractores (YouTube, Spotify, SoundCloud, etc.), yo solo usaré youtube y 
-    // spotify porque lo tengo adaptado para mi y mis amigos, pero sientete libre de cambiarlo
     await player.extractors.loadMulti(DefaultExtractors);
 
     setupMusicCommands(client, player, prefix);
@@ -38,7 +37,7 @@ async function iniciarBot() {
     });
 
     // Conectamos el bot a Discord
-    await client.login(process.env.TOKEN); // ⚠️IMPORTANTE⚠️: Crea un .env y guarda tu token así TOKEN=Tu_Token
+    await client.login(process.env.TOKEN); 
 }
 
 // A veces no encuentra musica y me veo obligado a poner un Anti-Crash para evitar caidas del bot
